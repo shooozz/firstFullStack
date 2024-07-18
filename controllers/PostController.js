@@ -2,7 +2,12 @@ import PostModel from "../models/Post.js";
 
 export const getAll = async (req, res) => {
     try {
-        const posts = await PostModel.find().populate("user").exec();
+        const sortBy = req.query.sortBy || "createdAt";
+        const sortOrder = req.query.sortOrder || "desc";
+        const posts = await PostModel.find()
+            .sort({ [sortBy]: sortOrder })
+            .populate("user")
+            .exec();
 
         res.json(posts);
     } catch (err) {
@@ -13,10 +18,28 @@ export const getAll = async (req, res) => {
     }
 };
 
+export const getLastTags = async (req, res) => {
+    try {
+        const posts = await PostModel.find().limit(5).exec();
+
+        const tags = posts
+            .map((post) => post.tags)
+            .flat()
+            .slice(0, 5);
+
+        res.json(tags);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: "We couldn't get tags, sorry",
+        });
+    }
+};
+
 export const getOne = async (req, res) => {
     try {
         const postId = req.params.id;
-        const post = await PostModel.findById(postId);
+        const post = await PostModel.findById(postId).populate("user");
         if (!post) {
             return res.status(404).json({
                 message: "Post not found",
@@ -61,7 +84,7 @@ export const create = async (req, res) => {
             title: req.body.title,
             text: req.body.text,
             imageUrl: req.body.imageUrl,
-            tags: req.body.tags,
+            tags: req.body.tags.split(","),
             user: req.userId,
         });
 
@@ -85,7 +108,7 @@ export const update = async (req, res) => {
                 title: req.body.title,
                 text: req.body.text,
                 imageUrl: req.body.imageUrl,
-                tags: req.body.tags,
+                tags: req.body.tags.split(","),
                 user: req.userId,
             }
         );
