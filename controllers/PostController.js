@@ -20,12 +20,22 @@ export const getAll = async (req, res) => {
 
 export const getLastTags = async (req, res) => {
     try {
-        const posts = await PostModel.find().limit(5).exec();
+        const posts = await PostModel.find().exec();
 
-        const tags = posts
-            .map((post) => post.tags)
-            .flat()
-            .slice(0, 5);
+        // Получение всех тегов из постов и преобразование их в один массив
+        const allTags = posts.map((post) => post.tags).flat();
+
+        // Получение уникальных тегов
+        const uniqueTags = [...new Set(allTags)];
+
+        // Перемешивание уникальных тегов
+        for (let i = uniqueTags.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [uniqueTags[i], uniqueTags[j]] = [uniqueTags[j], uniqueTags[i]];
+        }
+
+        // Ограничение массива уникальных тегов до 5 элементов
+        const tags = uniqueTags.slice(0, 5);
 
         res.json(tags);
     } catch (err) {
@@ -52,6 +62,34 @@ export const getOne = async (req, res) => {
         console.log(err);
         res.status(500).json({
             message: "Could not receive post",
+        });
+    }
+};
+
+export const getPostsByTag = async (req, res) => {
+    try {
+        const tagName = req.params.name;
+        const posts = await PostModel.find({ tags: tagName }).populate("user");
+
+        if (posts.length === 0) {
+            return res.status(404).json({
+                message: "Posts not found",
+            });
+        }
+
+        // Увеличение количества просмотров для каждого поста
+        await Promise.all(
+            posts.map(async (post) => {
+                post.viewsCount++;
+                await post.save();
+            })
+        );
+
+        res.json(posts);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: "Could not receive posts by tag",
         });
     }
 };
