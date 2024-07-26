@@ -1,20 +1,43 @@
 import express from "express";
-import jsonwebtoken from "jsonwebtoken";
-import mongoose from "mongoose";
-import bcrypt from "bcrypt";
-import { registerValidation } from "./validations/auth.js";
-import { validationResult } from "express-validator";
+import multer from "multer";
 
-import UserModel from "./models/Users.js";
+import cors from "cors";
+
+import mongoose from "mongoose";
+import { registerValidation, loginValidation } from "./validations/auth.js";
+import { postCreateValidation } from "./validations/post.js";
+
+import { UserController, PostController } from "./controllers/index.js";
+
+import { handleValidationErrors, checkAuth } from "./utils/utils.js";
+import { commentCreateValidation } from "./validations/comment.js";
+import {
+    createComment,
+    getAllComments,
+    getByPostId,
+    removeComment,
+} from "./controllers/CommentController.js";
 
 const app = express();
 
+const storage = multer.diskStorage({
+    destination: (_, __, cb) => {
+        cb(null, "uploads");
+    },
+    filename: (_, file, cb) => {
+        cb(null, file.originalname);
+    },
+});
+
+const upload = multer({ storage });
+
 app.use(express.json());
+app.use(cors());
+app.use("/uploads", express.static("uploads"));
 
 mongoose
     .connect(
-        "mongodb+srv://islampucigov:Nx0MWP3zXW3qe0As@cluster0.cwd1l5c.mongodb.net/blog?retryWrites=true&w=majority&appName=Cluster0",
-        { useNewUrlParser: true, useUnifiedTopology: true }
+        "mongodb+srv://islampucigov:Nx0MWP3zXW3qe0As@cluster0.cwd1l5c.mongodb.net/blog?retryWrites=true&w=majority&appName=Cluster0"
     )
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => {
@@ -22,53 +45,59 @@ mongoose
         process.exit(1);
     });
 
-app.post("/auth/register", registerValidation, async (req, res) => {
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json(errors.array());
-        }
-
-        const password = req.body.password;
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(password, salt);
-
-        const doc = new UserModel({
-            email: req.body.email,
-            fullName: req.body.fullName,
-            avatarUrl: req.body.avatarUrl,
-            passwordHash: hash,
-        });
-
-        const user = await doc.save();
-
-        const token = jsonwebtoken.sign(
-            {
-                _id: user._id,
-            },
-            "secret123",
-            {
-                expiresIn: "30d",
-            }
-        );
-
-        const { passwordHash, ...userData } = user._doc;
-
-        res.json({
-            ...user._doc,
-            token,
-        });
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: "This user already signed",
-        });
-    }
-});
-
 app.get("/", (req, res) => {
     res.send("Hello World!");
 });
+app.post(
+    "/auth/register",
+    registerValidation,
+    handleValidationErrors,
+    UserController.register
+);
+app.post(
+    "/auth/login",
+    loginValidation,
+    handleValidationErrors,
+    UserController.login
+);
+app.get("/auth/me", checkAuth, UserController.getMe);
+
+app.post("/upload", checkAuth, upload.single("image"), (req, res) => {
+    res.json({
+        url: `/uploads/${req.file.originalname}`,
+    });
+});
+
+app.get("/posts", PostController.getAll);
+app.get("/tags", PostController.getLastTags);
+app.get("/posts/:id", PostController.getOne);
+app.get("/tags/:name", PostController.getPostsByTag);
+app.post(
+    "/posts",
+    checkAuth,
+    postCreateValidation,
+    loginValidation,
+    PostController.create
+);
+app.delete("/posts/:id", checkAuth, PostController.remove);
+app.patch(
+    "/posts/:id",
+    checkAuth,
+    postCreateValidation,
+    loginValidation,
+    PostController.update
+);
+
+app.get("/comments", getAllComments);
+app.get("/comments/post/:postId", getByPostId);
+app.post(
+    "/comments",
+    checkAuth,
+    commentCreateValidation,
+    handleValidationErrors,
+    createComment
+);
+app.delete("/comments/:id", checkAuth, removeComment);
 
 const port = process.env.PORT || 4444;
 app.listen(port, () => {
