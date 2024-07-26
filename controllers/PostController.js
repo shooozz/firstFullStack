@@ -7,13 +7,20 @@ export const getAll = async (req, res) => {
         const posts = await PostModel.find()
             .sort({ [sortBy]: sortOrder })
             .populate("user")
+            .populate({
+                path: "comments",
+                populate: {
+                    path: "user", // Если нужно популировать пользователя в комментариях
+                    select: "fullName avatarUrl", // Выберите поля, которые хотите популировать
+                },
+            })
             .exec();
 
         res.json(posts);
     } catch (err) {
         console.log(err);
         res.status(500).json({
-            message: "We coudn't get articles, sorry",
+            message: "We couldn't get articles, sorry",
         });
     }
 };

@@ -30,4 +30,17 @@ const PostModel = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+// Виртуальное поле для комментариев
+PostModel.virtual("comments", {
+    ref: "Comment",
+    localField: "_id",
+    foreignField: "postId",
+    justOne: false,
+});
+
+// Включение виртуальных полей при сериализации в JSON и объекты
+PostModel.set("toJSON", { virtuals: true });
+PostModel.set("toObject", { virtuals: true });
+
 export default mongoose.model("Post", PostModel);

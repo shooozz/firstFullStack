@@ -10,6 +10,13 @@ import { postCreateValidation } from "./validations/post.js";
 import { UserController, PostController } from "./controllers/index.js";
 
 import { handleValidationErrors, checkAuth } from "./utils/utils.js";
+import { commentCreateValidation } from "./validations/comment.js";
+import {
+    createComment,
+    getAllComments,
+    getByPostId,
+    removeComment,
+} from "./controllers/CommentController.js";
 
 const app = express();
 
@@ -80,6 +87,17 @@ app.patch(
     loginValidation,
     PostController.update
 );
+
+app.get("/comments", getAllComments);
+app.get("/comments/post/:postId", getByPostId);
+app.post(
+    "/comments",
+    checkAuth,
+    commentCreateValidation,
+    handleValidationErrors,
+    createComment
+);
+app.delete("/comments/:id", checkAuth, removeComment);
 
 const port = process.env.PORT || 4444;
 app.listen(port, () => {
