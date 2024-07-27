@@ -56,7 +56,15 @@ export const getLastTags = async (req, res) => {
 export const getOne = async (req, res) => {
     try {
         const postId = req.params.id;
-        const post = await PostModel.findById(postId).populate("user");
+        const post = await PostModel.findById(postId)
+            .populate("user")
+            .populate({
+                path: "comments",
+                populate: {
+                    path: "user", // Если нужно популировать пользователя в комментариях
+                    select: "fullName avatarUrl", // Выберите поля, которые хотите популировать
+                },
+            });
         if (!post) {
             return res.status(404).json({
                 message: "Post not found",
