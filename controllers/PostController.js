@@ -25,34 +25,6 @@ export const getAll = async (req, res) => {
     }
 };
 
-export const getLastTags = async (req, res) => {
-    try {
-        const posts = await PostModel.find().exec();
-
-        // Получение всех тегов из постов и преобразование их в один массив
-        const allTags = posts.map((post) => post.tags).flat();
-
-        // Получение уникальных тегов
-        const uniqueTags = [...new Set(allTags)];
-
-        // Перемешивание уникальных тегов
-        for (let i = uniqueTags.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [uniqueTags[i], uniqueTags[j]] = [uniqueTags[j], uniqueTags[i]];
-        }
-
-        // Ограничение массива уникальных тегов до 5 элементов
-        const tags = uniqueTags.slice(0, 5);
-
-        res.json(tags);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            message: "We couldn't get tags, sorry",
-        });
-    }
-};
-
 export const getOne = async (req, res) => {
     try {
         const postId = req.params.id;
@@ -64,7 +36,8 @@ export const getOne = async (req, res) => {
                     path: "user", // Если нужно популировать пользователя в комментариях
                     select: "fullName avatarUrl", // Выберите поля, которые хотите популировать
                 },
-            });
+            })
+            .exec();
         if (!post) {
             return res.status(404).json({
                 message: "Post not found",
@@ -72,11 +45,35 @@ export const getOne = async (req, res) => {
         }
         post.viewsCount++;
         await post.save();
+
         res.json(post);
     } catch (err) {
         console.log(err);
         res.status(500).json({
             message: "Could not receive post",
+        });
+    }
+};
+
+export const getLastTags = async (req, res) => {
+    try {
+        // Получение всех постов, отсортированных по дате создания в порядке убывания
+        const posts = await PostModel.find().sort({ createdAt: -1 }).exec();
+
+        // Получение всех тегов из постов и преобразование их в один массив
+        const allTags = posts.map((post) => post.tags).flat();
+
+        // Получение уникальных тегов
+        const uniqueTags = [...new Set(allTags)];
+
+        // Ограничение массива уникальных тегов до 5 элементов
+        const tags = uniqueTags.slice(0, 5);
+
+        res.json(tags);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: "We couldn't get tags, sorry",
         });
     }
 };
@@ -91,14 +88,6 @@ export const getPostsByTag = async (req, res) => {
                 message: "Posts not found",
             });
         }
-
-        // Увеличение количества просмотров для каждого поста
-        await Promise.all(
-            posts.map(async (post) => {
-                post.viewsCount++;
-                await post.save();
-            })
-        );
 
         res.json(posts);
     } catch (err) {
@@ -137,7 +126,7 @@ export const create = async (req, res) => {
             title: req.body.title,
             text: req.body.text,
             imageUrl: req.body.imageUrl,
-            tags: req.body.tags.split(","),
+            tags: req.body.tags,
             user: req.userId,
         });
 
