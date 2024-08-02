@@ -33,8 +33,8 @@ export const getOne = async (req, res) => {
             .populate({
                 path: "comments",
                 populate: {
-                    path: "user",
-                    select: "fullName avatarUrl",
+                    path: "user", // Если нужно популировать пользователя в комментариях
+                    select: "fullName avatarUrl", // Выберите поля, которые хотите популировать
                 },
             })
             .exec();
@@ -88,14 +88,6 @@ export const getPostsByTag = async (req, res) => {
                 message: "Posts not found",
             });
         }
-
-        // // Увеличение количества просмотров для каждого поста
-        // await Promise.all(
-        //     posts.map(async (post) => {
-        //         post.viewsCount++;
-        //         await post.save();
-        //     })
-        // );
 
         res.json(posts);
     } catch (err) {
