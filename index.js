@@ -101,5 +101,5 @@ app.delete("/comments/:id", checkAuth, removeComment);
 
 const port = process.env.PORT || 4444;
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(` Server is running on port ${port}`);
 });
