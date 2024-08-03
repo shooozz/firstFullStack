@@ -67,7 +67,7 @@ export const getLastTags = async (req, res) => {
         const uniqueTags = [...new Set(allTags)];
 
         // Ограничение массива уникальных тегов до 5 элементов
-        const tags = uniqueTags.slice(0, 5);
+        const tags = uniqueTags;
 
         res.json(tags);
     } catch (err) {
