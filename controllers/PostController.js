@@ -81,7 +81,16 @@ export const getLastTags = async (req, res) => {
 export const getPostsByTag = async (req, res) => {
     try {
         const tagName = req.params.name;
-        const posts = await PostModel.find({ tags: tagName }).populate("user");
+        const posts = await PostModel.find({ tags: tagName })
+            .populate("user")
+            .populate({
+                path: "comments",
+                populate: {
+                    path: "user", // Если нужно популировать пользователя в комментариях
+                    select: "fullName avatarUrl", // Выберите поля, которые хотите популировать
+                },
+            })
+            .exec();
 
         if (posts.length === 0) {
             return res.status(404).json({
