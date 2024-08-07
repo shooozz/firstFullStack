@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
+import CommentModel from "./Comment.js";
 
-const PostModel = new mongoose.Schema(
+const PostSchema = new mongoose.Schema(
     {
         title: {
             type: String,
@@ -32,7 +33,7 @@ const PostModel = new mongoose.Schema(
 );
 
 // Виртуальное поле для комментариев
-PostModel.virtual("comments", {
+PostSchema.virtual("comments", {
     ref: "Comment",
     localField: "_id",
     foreignField: "postId",
@@ -40,7 +41,14 @@ PostModel.virtual("comments", {
 });
 
 // Включение виртуальных полей при сериализации в JSON и объекты
-PostModel.set("toJSON", { virtuals: true });
-PostModel.set("toObject", { virtuals: true });
+PostSchema.set("toJSON", { virtuals: true });
+PostSchema.set("toObject", { virtuals: true });
 
-export default mongoose.model("Post", PostModel);
+// Middleware для удаления комментариев при удалении поста
+PostSchema.pre("findOneAndDelete", async function (next) {
+    const postId = this.getQuery()["_id"];
+    await CommentModel.deleteMany({ postId });
+    next();
+});
+
+export default mongoose.model("Post", PostSchema);
